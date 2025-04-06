@@ -19,8 +19,14 @@ func TestCanPutAndListObjects(t *testing.T) {
 	t.Cleanup(func() { sv.StopServer() })
 	url := sv.GetEndpoint()
 
-	client := s3.NewClient(url, "my-region", "key", "secret", "my-bucket")
-	client.Insecure = true
+	client := s3.NewClient(s3.Config{
+		URL:       url,
+		Region:    "my-region",
+		KeyID:     "keyid",
+		KeySecret: "shh",
+		Bucket:    "my-bucket",
+		Insecure:  true,
+	})
 
 	// try uploading a file
 	err := client.PutObject("my-file.txt", []byte("abc"), nil)
@@ -63,8 +69,14 @@ func TestDeletion(t *testing.T) {
 	t.Cleanup(func() { sv.StopServer() })
 	url := sv.GetEndpoint()
 
-	client := s3.NewClient(url, "my-region", "key", "secret", "my-bucket")
-	client.Insecure = true
+	client := s3.NewClient(s3.Config{
+		URL:       url,
+		Region:    "my-region",
+		KeyID:     "keyid",
+		KeySecret: "shh",
+		Bucket:    "my-bucket",
+		Insecure:  true,
+	})
 
 	// put a file
 	err := client.PutObject("my-file.txt", []byte("abc"), nil)
@@ -153,8 +165,14 @@ func TestMultipleVersions(t *testing.T) {
 	t.Cleanup(func() { sv.StopServer() })
 	url := sv.GetEndpoint()
 
-	client := s3.NewClient(url, "my-region", "key", "secret", "my-bucket")
-	client.Insecure = true
+	client := s3.NewClient(s3.Config{
+		URL:       url,
+		Region:    "my-region",
+		KeyID:     "keyid",
+		KeySecret: "shh",
+		Bucket:    "my-bucket",
+		Insecure:  true,
+	})
 
 	// put a file twice
 	err := client.PutObject("my-file.txt", []byte("abc"), nil)
@@ -191,8 +209,14 @@ func TestObjectRetention(t *testing.T) {
 	t.Cleanup(func() { sv.StopServer() })
 	url := sv.GetEndpoint()
 
-	client := s3.NewClient(url, "my-region", "key", "secret", "my-bucket")
-	client.Insecure = true
+	client := s3.NewClient(s3.Config{
+		URL:       url,
+		Region:    "my-region",
+		KeyID:     "keyid",
+		KeySecret: "shh",
+		Bucket:    "my-bucket",
+		Insecure:  true,
+	})
 
 	// put a file
 	err := client.PutObject("my-file.txt", []byte("abc"), &s3.ObjectLockRetention{Mode: "COMPLIANCE", Until: now.Add(time.Hour)})
@@ -221,8 +245,14 @@ func TestObjectPutRetention(t *testing.T) {
 	t.Cleanup(func() { sv.StopServer() })
 	url := sv.GetEndpoint()
 
-	client := s3.NewClient(url, "my-region", "key", "secret", "my-bucket")
-	client.Insecure = true
+	client := s3.NewClient(s3.Config{
+		URL:       url,
+		Region:    "my-region",
+		KeyID:     "keyid",
+		KeySecret: "shh",
+		Bucket:    "my-bucket",
+		Insecure:  true,
+	})
 
 	// put a file
 	err := client.PutObject("my-file.txt", []byte("abc"), nil)
@@ -249,8 +279,14 @@ func TestObjectRetentionWithDeletionMarker(t *testing.T) {
 	t.Cleanup(func() { sv.StopServer() })
 	url := sv.GetEndpoint()
 
-	client := s3.NewClient(url, "my-region", "key", "secret", "my-bucket")
-	client.Insecure = true
+	client := s3.NewClient(s3.Config{
+		URL:       url,
+		Region:    "my-region",
+		KeyID:     "keyid",
+		KeySecret: "shh",
+		Bucket:    "my-bucket",
+		Insecure:  true,
+	})
 
 	// put a file
 	err := client.PutObject("my-file.txt", []byte("abc"), &s3.ObjectLockRetention{Mode: "COMPLIANCE", Until: now.Add(time.Hour)})

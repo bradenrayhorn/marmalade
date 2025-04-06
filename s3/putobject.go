@@ -27,6 +27,10 @@ func (c *Client) PutObject(key string, data []byte, retention *ObjectLockRetenti
 		req.Header.Set("x-amz-object-lock-retain-until-date", retention.Until.Format(time.RFC3339))
 	}
 
+	if c.storageClass != "" {
+		req.Header.Set("x-amz-storage-class", c.storageClass)
+	}
+
 	md5Sum := md5.Sum(data)
 	req.Header.Set("Content-MD5", base64.StdEncoding.EncodeToString(md5Sum[:]))
 

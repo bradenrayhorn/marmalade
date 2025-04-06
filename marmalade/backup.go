@@ -1,4 +1,4 @@
-package main
+package marmalade
 
 import (
 	"crypto/sha256"
@@ -15,16 +15,16 @@ import (
 	"github.com/bradenrayhorn/marmalade/s3"
 )
 
-func backup(client *s3.Client, file string, now time.Time, schedule retentionSchedule) error {
-	bytes, err := os.ReadFile(file)
+func Backup(client *s3.Client, schedule RetentionSchedule, at time.Time, filePath string) error {
+	bytes, err := os.ReadFile(filePath)
 	if err != nil {
 		return fmt.Errorf("read file: %w", err)
 	}
 
 	hash := sha256.Sum256(bytes)
 
-	pathParts := strings.Split(path.Base(file), ".")
-	backupFileName := fmt.Sprintf("%s.%s", now.Format("2006-01-02"), strings.Join(pathParts[1:], "."))
+	pathParts := strings.Split(path.Base(filePath), ".")
+	backupFileName := fmt.Sprintf("%s.%s", at.Format("2006-01-02"), strings.Join(pathParts[1:], "."))
 
 	// Get all objectVersions out of the bucket and check retention.
 	objectVersions, err := client.ListObjectVersions("", "", "", 500)
@@ -67,7 +67,7 @@ func backup(client *s3.Client, file string, now time.Time, schedule retentionSch
 		if lockHours > 0 {
 			retention = &s3.ObjectLockRetention{
 				Mode:  "COMPLIANCE",
-				Until: now.Add(time.Hour * time.Duration(lockHours)),
+				Until: at.Add(time.Hour * time.Duration(lockHours)),
 			}
 		}
 
@@ -83,7 +83,7 @@ func backup(client *s3.Client, file string, now time.Time, schedule retentionSch
 
 	// Update object lock retention.
 	if schedule.dailyLock.lockHours > 0 {
-		until := now.Add(time.Hour * time.Duration(schedule.dailyLock.lockHours))
+		until := at.Add(time.Hour * time.Duration(schedule.dailyLock.lockHours))
 		retention := &s3.ObjectLockRetention{Mode: "COMPLIANCE", Until: until}
 
 		for _, file := range retained.daily {
@@ -107,7 +107,7 @@ func backup(client *s3.Client, file string, now time.Time, schedule retentionSch
 	}
 
 	if schedule.monthlyLock.lockHours > 0 {
-		until := now.Add(time.Hour * time.Duration(schedule.monthlyLock.lockHours))
+		until := at.Add(time.Hour * time.Duration(schedule.monthlyLock.lockHours))
 		retention := &s3.ObjectLockRetention{Mode: "COMPLIANCE", Until: until}
 
 		for _, file := range retained.monthly {
@@ -131,7 +131,7 @@ func backup(client *s3.Client, file string, now time.Time, schedule retentionSch
 	}
 
 	if schedule.yearlyLock.lockHours > 0 {
-		until := now.Add(time.Hour * time.Duration(schedule.yearlyLock.lockHours))
+		until := at.Add(time.Hour * time.Duration(schedule.yearlyLock.lockHours))
 		retention := &s3.ObjectLockRetention{Mode: "COMPLIANCE", Until: until}
 
 		for _, file := range retained.yearly {

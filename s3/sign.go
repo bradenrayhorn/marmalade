@@ -96,7 +96,7 @@ func (c *Client) signV4(req *http.Request, body io.ReadSeeker) error {
 
 	// Create string to sign
 	algorithm := "AWS4-HMAC-SHA256"
-	credentialScope := fmt.Sprintf("%s/%s/s3/aws4_request", dateStamp, c.Region)
+	credentialScope := fmt.Sprintf("%s/%s/s3/aws4_request", dateStamp, c.region)
 
 	h := sha256.New()
 	h.Write([]byte(canonicalRequest))
@@ -109,8 +109,8 @@ func (c *Client) signV4(req *http.Request, body io.ReadSeeker) error {
 		canonicalRequestHash)
 
 	// Calculate signature
-	kDate := hmacSHA256([]byte("AWS4"+c.SecretKey), []byte(dateStamp))
-	kRegion := hmacSHA256(kDate, []byte(c.Region))
+	kDate := hmacSHA256([]byte("AWS4"+c.secretKey), []byte(dateStamp))
+	kRegion := hmacSHA256(kDate, []byte(c.region))
 	kService := hmacSHA256(kRegion, []byte("s3"))
 	kSigning := hmacSHA256(kService, []byte("aws4_request"))
 	signature := hex.EncodeToString(hmacSHA256(kSigning, []byte(stringToSign)))
@@ -118,7 +118,7 @@ func (c *Client) signV4(req *http.Request, body io.ReadSeeker) error {
 	// Add Authorization header
 	authHeader := fmt.Sprintf("%s Credential=%s/%s, SignedHeaders=%s, Signature=%s",
 		algorithm,
-		c.AccessKey,
+		c.accessKey,
 		credentialScope,
 		signedHeaders,
 		signature)

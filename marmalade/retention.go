@@ -1,4 +1,4 @@
-package main
+package marmalade
 
 import (
 	"slices"
@@ -19,7 +19,7 @@ func (r retainedFiles) All() []string {
 	return all
 }
 
-func calculateRetention(files []string, schedule retentionSchedule) retainedFiles {
+func calculateRetention(files []string, schedule RetentionSchedule) retainedFiles {
 	sortedFiles := make([]string, len(files))
 	copy(sortedFiles, files)
 

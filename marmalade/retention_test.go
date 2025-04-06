@@ -1,4 +1,4 @@
-package main
+package marmalade
 
 import (
 	"reflect"
@@ -8,12 +8,12 @@ import (
 func TestRetention(t *testing.T) {
 
 	testCases := []struct {
-		schedule retentionSchedule
+		schedule RetentionSchedule
 		input    []string
 		expected retainedFiles
 	}{
 		{
-			retentionSchedule{
+			RetentionSchedule{
 				daily:   3,
 				monthly: 3,
 				yearly:  4,
@@ -60,7 +60,7 @@ func TestRetention(t *testing.T) {
 		},
 
 		{
-			retentionSchedule{
+			RetentionSchedule{
 				daily:    0,
 				monthly:  3,
 				yearly:   0,
@@ -84,7 +84,7 @@ func TestRetention(t *testing.T) {
 		},
 
 		{
-			retentionSchedule{
+			RetentionSchedule{
 				daily:   2,
 				monthly: 3,
 				yearly:  3,

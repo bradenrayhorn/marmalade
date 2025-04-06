@@ -1,4 +1,4 @@
-package main
+package marmalade
 
 import (
 	"os"
@@ -17,8 +17,14 @@ func setupTest(t *testing.T) (*s3.Client, *fakes3.FakeS3, string) {
 	t.Cleanup(func() { sv.StopServer() })
 	url := sv.GetEndpoint()
 
-	client := s3.NewClient(url, "my-region", "key", "secret", "my-bucket")
-	client.Insecure = true
+	client := s3.NewClient(s3.Config{
+		URL:       url,
+		Region:    "my-region",
+		KeyID:     "keyid",
+		KeySecret: "shh",
+		Bucket:    "my-bucket",
+		Insecure:  true,
+	})
 
 	file, err := os.CreateTemp("", "*.txt")
 	assert.NoErr(t, err)
@@ -27,7 +33,7 @@ func setupTest(t *testing.T) (*s3.Client, *fakes3.FakeS3, string) {
 	return client, sv, file.Name()
 }
 
-var schedule = retentionSchedule{
+var schedule = RetentionSchedule{
 	daily:     3,
 	dailyLock: lockSchedule{lockType: lockTypeSimple, lockHours: 2},
 }
@@ -36,14 +42,14 @@ func TestCanBackup(t *testing.T) {
 	client, fs3, file := setupTest(t)
 	now := time.Date(2025, time.March, 5, 3, 0, 0, 0, time.UTC)
 
-	err := backup(client, file, now, schedule)
+	err := Backup(client, schedule, now, file)
 	assert.NoErr(t, err)
 
 	assert.HasOneVersion(t, fs3.GetVersions("2025-03-05.txt"), now.Add(time.Hour*2))
 	assert.HasOneVersion(t, fs3.GetVersions("2025-03-05.txt.sha256"), now.Add(time.Hour*2))
 
 	// try again, expect no changes - should never upload duplicate files
-	err = backup(client, file, now, schedule)
+	err = Backup(client, schedule, now, file)
 	assert.NoErr(t, err)
 
 	assert.HasOneVersion(t, fs3.GetVersions("2025-03-05.txt"), now.Add(time.Hour*2))
@@ -51,12 +57,12 @@ func TestCanBackup(t *testing.T) {
 }
 
 func TestSkipsUploadIfNotRetaining(t *testing.T) {
-	schedule := retentionSchedule{daily: 0}
+	schedule := RetentionSchedule{daily: 0}
 
 	client, fs3, file := setupTest(t)
 	now := time.Date(2025, time.March, 5, 3, 0, 0, 0, time.UTC)
 
-	err := backup(client, file, now, schedule)
+	err := Backup(client, schedule, now, file)
 	assert.NoErr(t, err)
 
 	assert.Equal(t, 0, len(fs3.GetVersions("2025-03-05.txt")))
@@ -64,11 +70,11 @@ func TestSkipsUploadIfNotRetaining(t *testing.T) {
 }
 
 func TestCanBackupWithNoLock(t *testing.T) {
-	schedule := retentionSchedule{daily: 1}
+	schedule := RetentionSchedule{daily: 1}
 	client, fs3, file := setupTest(t)
 	now := time.Date(2025, time.March, 5, 3, 0, 0, 0, time.UTC)
 
-	err := backup(client, file, now, schedule)
+	err := Backup(client, schedule, now, file)
 	assert.NoErr(t, err)
 
 	assert.HasOneVersion(t, fs3.GetVersions("2025-03-05.txt"), time.Time{})
@@ -82,7 +88,7 @@ func TestDeletesUnknownFiles(t *testing.T) {
 	err := client.PutObject("randomfile.txt", []byte("abc"), nil)
 	assert.NoErr(t, err)
 
-	err = backup(client, file, now, schedule)
+	err = Backup(client, schedule, now, file)
 	assert.NoErr(t, err)
 
 	assert.Equal(t, 0, len(fs3.GetVersions("randomfile.txt")))
@@ -96,31 +102,31 @@ func TestPutsWithLockTime(t *testing.T) {
 
 	// DAILY
 	fs3.Reset()
-	schedule := retentionSchedule{daily: 1, dailyLock: lockSchedule{lockType: lockTypeRolling, lockHours: 2}}
-	err := backup(client, file, now, schedule)
+	schedule := RetentionSchedule{daily: 1, dailyLock: lockSchedule{lockType: lockTypeRolling, lockHours: 2}}
+	err := Backup(client, schedule, now, file)
 	assert.NoErr(t, err)
 	assert.HasOneVersion(t, fs3.GetVersions("2025-03-05.txt"), now.Add(time.Hour*2))
 	assert.HasOneVersion(t, fs3.GetVersions("2025-03-05.txt.sha256"), now.Add(time.Hour*2))
 
 	// MONTHLY
 	fs3.Reset()
-	schedule = retentionSchedule{monthly: 1, monthlyLock: lockSchedule{lockType: lockTypeRolling, lockHours: 3}}
-	err = backup(client, file, now, schedule)
+	schedule = RetentionSchedule{monthly: 1, monthlyLock: lockSchedule{lockType: lockTypeRolling, lockHours: 3}}
+	err = Backup(client, schedule, now, file)
 	assert.NoErr(t, err)
 	assert.HasOneVersion(t, fs3.GetVersions("2025-03-05.txt"), now.Add(time.Hour*3))
 	assert.HasOneVersion(t, fs3.GetVersions("2025-03-05.txt.sha256"), now.Add(time.Hour*3))
 
 	// YEARLY
 	fs3.Reset()
-	schedule = retentionSchedule{yearly: 1, yearlyLock: lockSchedule{lockType: lockTypeRolling, lockHours: 4}}
-	err = backup(client, file, now, schedule)
+	schedule = RetentionSchedule{yearly: 1, yearlyLock: lockSchedule{lockType: lockTypeRolling, lockHours: 4}}
+	err = Backup(client, schedule, now, file)
 	assert.NoErr(t, err)
 	assert.HasOneVersion(t, fs3.GetVersions("2025-03-05.txt"), now.Add(time.Hour*4))
 	assert.HasOneVersion(t, fs3.GetVersions("2025-03-05.txt.sha256"), now.Add(time.Hour*4))
 }
 
 func TestUpdatesRollingRetention(t *testing.T) {
-	schedule := retentionSchedule{
+	schedule := RetentionSchedule{
 		daily: 2, dailyLock: lockSchedule{lockType: lockTypeRolling, lockHours: 2},
 		monthly: 2, monthlyLock: lockSchedule{lockType: lockTypeRolling, lockHours: 3},
 		yearly: 2, yearlyLock: lockSchedule{lockType: lockTypeRolling, lockHours: 4},
@@ -130,23 +136,23 @@ func TestUpdatesRollingRetention(t *testing.T) {
 	// backup March 5 2025, April 5 2026, May 2 2026
 	now := time.Date(2025, time.March, 5, 3, 0, 0, 0, time.UTC)
 	fs3.SetNow(now)
-	err := backup(client, file, now, schedule)
+	err := Backup(client, schedule, now, file)
 	assert.NoErr(t, err)
 
 	now = time.Date(2026, time.April, 5, 3, 0, 0, 0, time.UTC)
 	fs3.SetNow(now)
-	err = backup(client, file, now, schedule)
+	err = Backup(client, schedule, now, file)
 	assert.NoErr(t, err)
 
 	now = time.Date(2026, time.May, 2, 3, 0, 0, 0, time.UTC)
 	fs3.SetNow(now)
-	err = backup(client, file, now, schedule)
+	err = Backup(client, schedule, now, file)
 	assert.NoErr(t, err)
 
 	// do one more backup on May 3
 	now = time.Date(2026, time.May, 3, 3, 0, 0, 0, time.UTC)
 	fs3.SetNow(now)
-	err = backup(client, file, now, schedule)
+	err = Backup(client, schedule, now, file)
 	assert.NoErr(t, err)
 
 	// check retentions have been extended
@@ -164,7 +170,7 @@ func TestUpdatesRollingRetention(t *testing.T) {
 }
 
 func TestUpdatesSimpleRetentionAndDeletes(t *testing.T) {
-	schedule := retentionSchedule{
+	schedule := RetentionSchedule{
 		daily: 2, dailyLock: lockSchedule{lockType: lockTypeSimple, lockHours: 2},
 		monthly: 3, monthlyLock: lockSchedule{lockType: lockTypeSimple, lockHours: 3},
 		yearly: 3, yearlyLock: lockSchedule{lockType: lockTypeSimple, lockHours: 4},
@@ -175,7 +181,7 @@ func TestUpdatesSimpleRetentionAndDeletes(t *testing.T) {
 	now := time.Date(2025, time.March, 5, 3, 0, 0, 0, time.UTC)
 	mar5 := now
 	fs3.SetNow(now)
-	err := backup(client, file, now, schedule)
+	err := Backup(client, schedule, now, file)
 	assert.NoErr(t, err)
 
 	assert.HasOneVersion(t, fs3.GetVersions("2025-03-05.txt"), now.Add(time.Hour*2))
@@ -185,7 +191,7 @@ func TestUpdatesSimpleRetentionAndDeletes(t *testing.T) {
 	now = time.Date(2025, time.March, 6, 3, 0, 0, 0, time.UTC)
 	mar6 := now
 	fs3.SetNow(now)
-	err = backup(client, file, now, schedule)
+	err = Backup(client, schedule, now, file)
 	assert.NoErr(t, err)
 
 	assert.HasOneVersion(t, fs3.GetVersions("2025-03-05.txt"), mar5.Add(time.Hour*2))
@@ -197,7 +203,7 @@ func TestUpdatesSimpleRetentionAndDeletes(t *testing.T) {
 	now = time.Date(2025, time.April, 1, 3, 0, 0, 0, time.UTC)
 	apr1 := now
 	fs3.SetNow(now)
-	err = backup(client, file, now, schedule)
+	err = Backup(client, schedule, now, file)
 	assert.NoErr(t, err)
 
 	assert.Equal(t, 0, len(fs3.GetVersions("2025-03-05.txt")))
@@ -211,7 +217,7 @@ func TestUpdatesSimpleRetentionAndDeletes(t *testing.T) {
 	now = time.Date(2025, time.May, 2, 3, 0, 0, 0, time.UTC)
 	may2 := now
 	fs3.SetNow(now)
-	err = backup(client, file, now, schedule)
+	err = Backup(client, schedule, now, file)
 	assert.NoErr(t, err)
 
 	assert.HasOneVersion(t, fs3.GetVersions("2025-03-06.txt"), may2.Add(time.Hour*3)) // was upgraded to monthly
@@ -225,7 +231,7 @@ func TestUpdatesSimpleRetentionAndDeletes(t *testing.T) {
 	now = time.Date(2026, time.October, 2, 3, 0, 0, 0, time.UTC)
 	oct2 := now
 	fs3.SetNow(now)
-	err = backup(client, file, now, schedule)
+	err = Backup(client, schedule, now, file)
 	assert.NoErr(t, err)
 
 	assert.Equal(t, 0, len(fs3.GetVersions("2025-03-06.txt")))
@@ -241,7 +247,7 @@ func TestUpdatesSimpleRetentionAndDeletes(t *testing.T) {
 	now = time.Date(2026, time.November, 2, 3, 0, 0, 0, time.UTC)
 	nov2 := now
 	fs3.SetNow(now)
-	err = backup(client, file, now, schedule)
+	err = Backup(client, schedule, now, file)
 	assert.NoErr(t, err)
 
 	assert.Equal(t, 0, len(fs3.GetVersions("2025-04-01.txt")))
@@ -257,7 +263,7 @@ func TestUpdatesSimpleRetentionAndDeletes(t *testing.T) {
 	now = time.Date(2026, time.December, 2, 3, 0, 0, 0, time.UTC)
 	dec2 := now
 	fs3.SetNow(now)
-	err = backup(client, file, now, schedule)
+	err = Backup(client, schedule, now, file)
 	assert.NoErr(t, err)
 
 	assert.HasOneVersion(t, fs3.GetVersions("2025-05-02.txt"), dec2.Add(time.Hour*4)) // was upgrade to yearly

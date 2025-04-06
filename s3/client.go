@@ -8,25 +8,28 @@ import (
 )
 
 type Client struct {
-	Endpoint   string
-	Region     string
-	AccessKey  string
-	SecretKey  string
-	BucketName string
+	endpoint     string
+	region       string
+	accessKey    string
+	secretKey    string
+	bucketName   string
+	storageClass string
 
-	Insecure bool
+	insecure bool
 
 	httpClient *http.Client
 }
 
-func NewClient(endpoint, region, accessKey, secretKey, bucketName string) *Client {
+func NewClient(config Config) *Client {
 	return &Client{
-		Endpoint:   endpoint,
-		Region:     region,
-		AccessKey:  accessKey,
-		SecretKey:  secretKey,
-		BucketName: bucketName,
-		httpClient: &http.Client{Timeout: 60 * time.Second},
+		endpoint:     config.URL,
+		region:       config.Region,
+		accessKey:    config.KeyID,
+		secretKey:    config.KeySecret,
+		bucketName:   config.Bucket,
+		storageClass: config.StorageClass,
+		insecure:     config.Insecure,
+		httpClient:   &http.Client{Timeout: 60 * time.Second},
 	}
 }
 
@@ -44,19 +47,19 @@ type ObjectIdentifier struct {
 }
 
 func (c *Client) buildURL(key string, query url.Values) string {
-	path := fmt.Sprintf("/%s", c.BucketName)
+	path := fmt.Sprintf("/%s", c.bucketName)
 	if key != "" {
 		path = fmt.Sprintf("%s/%s", path, url.PathEscape(key))
 	}
 
 	scheme := "https"
-	if c.Insecure {
+	if c.insecure {
 		scheme = "http"
 	}
 
 	u := url.URL{
 		Scheme: scheme,
-		Host:   c.Endpoint,
+		Host:   c.endpoint,
 		Path:   path,
 	}
 
