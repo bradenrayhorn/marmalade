@@ -12,7 +12,6 @@ import (
 func main() {
 	backupCmd := flag.NewFlagSet("backup", flag.ExitOnError)
 	backupFile := backupCmd.String("f", "", "Path to back up")
-	backupAgeIdentity := backupCmd.String("i", "", "Age identity to encrypt with")
 
 	extendLocksCmd := flag.NewFlagSet("extend-locks", flag.ExitOnError)
 
@@ -28,8 +27,8 @@ func main() {
 	switch os.Args[1] {
 	case "backup":
 		backupCmd.Parse(os.Args[2:])
-		if *backupFile == "" || *backupAgeIdentity == "" {
-			fmt.Println("backup: -f and -i flags are required")
+		if *backupFile == "" {
+			fmt.Println("backup: -f flags are required")
 			backupCmd.PrintDefaults()
 			os.Exit(1)
 		}
@@ -40,7 +39,7 @@ func main() {
 			os.Exit(1)
 		}
 
-		err = encryptAndBackup(loadConfig(), schedule, *backupFile, *backupAgeIdentity)
+		err = encryptAndBackup(loadConfig(), schedule, *backupFile, os.Getenv("MARMALADE_AGE_IDENTITY"))
 		if err != nil {
 			fmt.Println(err)
 			os.Exit(1)
