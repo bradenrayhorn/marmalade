@@ -1,7 +1,6 @@
 package s3
 
 import (
-	"bytes"
 	"crypto/md5"
 	"encoding/base64"
 	"fmt"
@@ -10,17 +9,16 @@ import (
 	"time"
 )
 
-func (c *Client) PutObject(key string, data []byte, retention *ObjectLockRetention) error {
+func (c *Client) PutObject(key string, data io.ReadSeeker, dataLength int64, retention *ObjectLockRetention) error {
 	reqURL := c.buildURL(key, nil)
-	bodyReader := bytes.NewReader(data)
 
-	req, err := http.NewRequest(http.MethodPut, reqURL, bodyReader)
+	req, err := http.NewRequest(http.MethodPut, reqURL, data)
 	if err != nil {
 		return err
 	}
 
 	req.Header.Set("Content-Type", "application/octet-stream")
-	req.ContentLength = int64(len(data))
+	req.ContentLength = dataLength
 
 	if retention != nil {
 		req.Header.Set("x-amz-object-lock-mode", retention.Mode)
@@ -31,10 +29,20 @@ func (c *Client) PutObject(key string, data []byte, retention *ObjectLockRetenti
 		req.Header.Set("x-amz-storage-class", c.storageClass)
 	}
 
-	md5Sum := md5.Sum(data)
-	req.Header.Set("Content-MD5", base64.StdEncoding.EncodeToString(md5Sum[:]))
+	// compute md5 hash
+	hash := md5.New()
+	if _, err := io.Copy(hash, data); err != nil {
+		return err
+	}
+	hashSum := hash.Sum(nil)
+	if _, err := data.Seek(0, io.SeekStart); err != nil {
+		return err
+	}
 
-	if err := c.signV4(req, bytes.NewReader(data)); err != nil {
+	req.Header.Set("Content-MD5", base64.StdEncoding.EncodeToString(hashSum[:]))
+
+	// sign and send request
+	if err := c.signV4(req, data); err != nil {
 		return err
 	}
 

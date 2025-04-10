@@ -26,7 +26,7 @@ func encryptAndBackup(s3config s3.Config, schedule marmalade.RetentionSchedule, 
 		return err
 	}
 
-	err = marmalade.Backup(client, schedule, time.Now(), encryptedArchive)
+	err = marmalade.Backup(client, schedule, time.Now().UTC(), encryptedArchive)
 	if err != nil {
 		return fmt.Errorf("backup: %w", err)
 	}

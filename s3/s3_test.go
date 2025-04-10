@@ -1,6 +1,7 @@
 package s3_test
 
 import (
+	"bytes"
 	"testing"
 	"time"
 
@@ -29,7 +30,7 @@ func TestCanPutAndListObjects(t *testing.T) {
 	})
 
 	// try uploading a file
-	err := client.PutObject("my-file.txt", []byte("abc"), nil)
+	err := client.PutObject("my-file.txt", bytes.NewReader([]byte("abc")), 3, nil)
 	assert.NoErr(t, err)
 
 	versions := sv.GetVersions("my-file.txt")
@@ -79,7 +80,7 @@ func TestDeletion(t *testing.T) {
 	})
 
 	// put a file
-	err := client.PutObject("my-file.txt", []byte("abc"), nil)
+	err := client.PutObject("my-file.txt", bytes.NewReader([]byte("abc")), 3, nil)
 	assert.NoErr(t, err)
 
 	// delete the specific version
@@ -91,7 +92,7 @@ func TestDeletion(t *testing.T) {
 	assert.Equal(t, 0, len(versions))
 
 	// put a file back
-	err = client.PutObject("my-file.txt", []byte("abc"), nil)
+	err = client.PutObject("my-file.txt", bytes.NewReader([]byte("abc")), 3, nil)
 	assert.NoErr(t, err)
 
 	// delete without version (make delete marker)
@@ -175,9 +176,9 @@ func TestMultipleVersions(t *testing.T) {
 	})
 
 	// put a file twice
-	err := client.PutObject("my-file.txt", []byte("abc"), nil)
+	err := client.PutObject("my-file.txt", bytes.NewReader([]byte("abc")), 3, nil)
 	assert.NoErr(t, err)
-	err = client.PutObject("my-file.txt", []byte("abc"), nil)
+	err = client.PutObject("my-file.txt", bytes.NewReader([]byte("abc")), 3, nil)
 	assert.NoErr(t, err)
 
 	// try listing file versions
@@ -219,7 +220,7 @@ func TestObjectRetention(t *testing.T) {
 	})
 
 	// put a file
-	err := client.PutObject("my-file.txt", []byte("abc"), &s3.ObjectLockRetention{Mode: "COMPLIANCE", Until: now.Add(time.Hour)})
+	err := client.PutObject("my-file.txt", bytes.NewReader([]byte("abc")), 3, &s3.ObjectLockRetention{Mode: "COMPLIANCE", Until: now.Add(time.Hour)})
 	assert.NoErr(t, err)
 
 	// try to delete the file
@@ -255,7 +256,7 @@ func TestObjectPutRetention(t *testing.T) {
 	})
 
 	// put a file
-	err := client.PutObject("my-file.txt", []byte("abc"), nil)
+	err := client.PutObject("my-file.txt", bytes.NewReader([]byte("abc")), 3, nil)
 	assert.NoErr(t, err)
 
 	// try to put retention
@@ -289,7 +290,7 @@ func TestObjectRetentionWithDeletionMarker(t *testing.T) {
 	})
 
 	// put a file
-	err := client.PutObject("my-file.txt", []byte("abc"), &s3.ObjectLockRetention{Mode: "COMPLIANCE", Until: now.Add(time.Hour)})
+	err := client.PutObject("my-file.txt", bytes.NewReader([]byte("abc")), 3, &s3.ObjectLockRetention{Mode: "COMPLIANCE", Until: now.Add(time.Hour)})
 	assert.NoErr(t, err)
 
 	// try to delete the file

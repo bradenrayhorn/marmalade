@@ -1,9 +1,11 @@
 package marmalade
 
 import (
+	"bytes"
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
+	"io"
 	"log/slog"
 	"maps"
 	"os"
@@ -16,12 +18,24 @@ import (
 )
 
 func Backup(client *s3.Client, schedule RetentionSchedule, at time.Time, filePath string) error {
-	bytes, err := os.ReadFile(filePath)
+	stat, err := os.Stat(filePath)
+	if err != nil {
+		return fmt.Errorf("file stat: %w", err)
+	}
+
+	file, err := os.Open(filePath)
 	if err != nil {
 		return fmt.Errorf("read file: %w", err)
 	}
 
-	hash := sha256.Sum256(bytes)
+	hash := sha256.New()
+	if _, err := io.Copy(hash, file); err != nil {
+		return err
+	}
+	if _, err := file.Seek(0, io.SeekStart); err != nil {
+		return err
+	}
+	sha256Sum := []byte(hex.EncodeToString(hash.Sum(nil)))
 
 	pathParts := strings.Split(path.Base(filePath), ".")
 	backupFileName := fmt.Sprintf("%s.%s", at.Format("2006-01-02"), strings.Join(pathParts[1:], "."))
@@ -71,10 +85,10 @@ func Backup(client *s3.Client, schedule RetentionSchedule, at time.Time, filePat
 			}
 		}
 
-		if err := client.PutObject(backupFileName+".sha256", []byte(hex.EncodeToString(hash[:])), retention); err != nil {
+		if err := client.PutObject(backupFileName+".sha256", bytes.NewReader(sha256Sum), int64(len(sha256Sum)), retention); err != nil {
 			return fmt.Errorf("put object hash: %w", err)
 		}
-		if err := client.PutObject(backupFileName, bytes, retention); err != nil {
+		if err := client.PutObject(backupFileName, file, stat.Size(), retention); err != nil {
 			return fmt.Errorf("put object: %w", err)
 		}
 	} else {

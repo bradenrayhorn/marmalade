@@ -1,6 +1,7 @@
 package marmalade
 
 import (
+	"bytes"
 	"os"
 	"testing"
 	"time"
@@ -85,7 +86,7 @@ func TestDeletesUnknownFiles(t *testing.T) {
 	client, fs3, file := setupTest(t)
 	now := time.Date(2025, time.March, 5, 3, 0, 0, 0, time.UTC)
 
-	err := client.PutObject("randomfile.txt", []byte("abc"), nil)
+	err := client.PutObject("randomfile.txt", bytes.NewReader([]byte("abc")), 3, nil)
 	assert.NoErr(t, err)
 
 	err = Backup(client, schedule, now, file)
