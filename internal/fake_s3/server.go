@@ -40,6 +40,8 @@ type FakeS3 struct {
 	objects       map[string]map[string]*ObjectVersion // map[key]map[versionID]*ObjectVersion
 	nextVersionID int
 	now           time.Time
+
+	interceptor func(r *http.Request, w http.ResponseWriter) bool
 }
 
 func NewFakeS3(bucket string) *FakeS3 {
@@ -63,6 +65,10 @@ func (s *FakeS3) StopServer() {
 
 func (s *FakeS3) SetNow(time time.Time) {
 	s.now = time.UTC()
+}
+
+func (s *FakeS3) SetInterceptor(i func(r *http.Request, w http.ResponseWriter) bool) {
+	s.interceptor = i
 }
 
 func (s *FakeS3) GetEndpoint() string {
@@ -114,6 +120,12 @@ func (s *FakeS3) handleRequest(w http.ResponseWriter, r *http.Request) {
 	}
 	if len(parts) > 2 {
 		key = parts[2]
+	}
+
+	if s.interceptor != nil {
+		if s.interceptor(r, w) {
+			return
+		}
 	}
 
 	if bucket != s.bucket {

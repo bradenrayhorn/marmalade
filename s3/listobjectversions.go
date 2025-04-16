@@ -63,30 +63,38 @@ func (c *Client) ListObjectVersions(prefix, keyMarker, versionIdMarker string, m
 
 	reqURL := c.buildURL("", query)
 
-	req, err := http.NewRequest(http.MethodGet, reqURL, nil)
-	if err != nil {
-		return nil, err
-	}
+	return withRetries(func() (*ListObjectVersionsResult, error) {
+		req, err := http.NewRequest(http.MethodGet, reqURL, nil)
+		if err != nil {
+			return nil, err
+		}
 
-	if err := c.signV4(req, bytes.NewReader(nil)); err != nil {
-		return nil, err
-	}
+		if err := c.signV4(req, bytes.NewReader(nil)); err != nil {
+			return nil, err
+		}
 
-	resp, err := c.httpClient.Do(req)
-	if err != nil {
-		return nil, err
-	}
-	defer resp.Body.Close()
+		resp, err := c.httpClient.Do(req)
+		if err != nil {
+			return nil, err
+		}
+		defer resp.Body.Close()
 
-	if resp.StatusCode != http.StatusOK {
-		body, _ := io.ReadAll(resp.Body)
-		return nil, fmt.Errorf("ListObjectVersions failed with status: %s, response: %s", resp.Status, string(body))
-	}
+		if resp.StatusCode != http.StatusOK {
+			body, _ := io.ReadAll(resp.Body)
+			err := fmt.Errorf("ListObjectVersions failed with status: %s, response: %s", resp.Status, string(body))
 
-	result := &ListObjectVersionsResult{}
-	if err := xml.NewDecoder(resp.Body).Decode(result); err != nil {
-		return nil, fmt.Errorf("failed to parse ListObjectVersions XML: %v", err)
-	}
+			if resp.StatusCode >= 500 {
+				return nil, retriableError{err}
+			} else {
+				return nil, err
+			}
+		}
 
-	return result, nil
+		result := &ListObjectVersionsResult{}
+		if err := xml.NewDecoder(resp.Body).Decode(result); err != nil {
+			return nil, fmt.Errorf("failed to parse ListObjectVersions XML: %v", err)
+		}
+
+		return result, nil
+	})
 }
