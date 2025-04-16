@@ -46,7 +46,7 @@ func TestBackup(t *testing.T) {
 	assert.NoErr(t, err)
 
 	// do backup
-	err = encryptAndBackup(s3config, schedule, file.Name(), id.String())
+	err = encryptAndBackup(s3config, schedule, file.Name(), id.Recipient().String())
 	assert.NoErr(t, err)
 
 	// get stored file

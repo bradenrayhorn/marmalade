@@ -39,7 +39,7 @@ func main() {
 			os.Exit(1)
 		}
 
-		err = encryptAndBackup(loadConfig(), schedule, *backupFile, os.Getenv("MARMALADE_AGE_IDENTITY"))
+		err = encryptAndBackup(loadConfig(), schedule, *backupFile, os.Getenv("MARMALADE_AGE_PUBLIC_KEY"))
 		if err != nil {
 			fmt.Println(err)
 			os.Exit(1)

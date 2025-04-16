@@ -12,7 +12,7 @@ import (
 	"github.com/bradenrayhorn/marmalade/s3"
 )
 
-func encryptAndBackup(s3config s3.Config, schedule marmalade.RetentionSchedule, path, ageIdentity string) error {
+func encryptAndBackup(s3config s3.Config, schedule marmalade.RetentionSchedule, path, agePublicKey string) error {
 	client := s3.NewClient(s3config)
 
 	workingDir, err := os.MkdirTemp("", "marmalade-*")
@@ -21,7 +21,7 @@ func encryptAndBackup(s3config s3.Config, schedule marmalade.RetentionSchedule, 
 	}
 	defer func() { _ = os.RemoveAll(workingDir) }()
 
-	encryptedArchive, err := encrypt(ageIdentity, path, workingDir)
+	encryptedArchive, err := encrypt(agePublicKey, path, workingDir)
 	if err != nil {
 		return err
 	}
@@ -34,8 +34,8 @@ func encryptAndBackup(s3config s3.Config, schedule marmalade.RetentionSchedule, 
 	return nil
 }
 
-func encrypt(ageIdentity, filePath, workingDir string) (string, error) {
-	identity, err := age.ParseX25519Identity(ageIdentity)
+func encrypt(agePublicKey, filePath, workingDir string) (string, error) {
+	recipient, err := age.ParseX25519Recipient(agePublicKey)
 	if err != nil {
 		return "", fmt.Errorf("age identity: %w", err)
 	}
@@ -52,7 +52,7 @@ func encrypt(ageIdentity, filePath, workingDir string) (string, error) {
 	}
 	defer func() { _ = archive.Close() }()
 
-	w, err := age.Encrypt(archive, identity.Recipient())
+	w, err := age.Encrypt(archive, recipient)
 	if err != nil {
 		return "", fmt.Errorf("age encrypt: %w", err)
 	}
