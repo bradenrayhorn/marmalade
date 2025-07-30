@@ -13,20 +13,19 @@ func main() {
 	backupCmd := flag.NewFlagSet("backup", flag.ExitOnError)
 	backupFile := backupCmd.String("f", "", "Path to back up")
 
-	extendLocksCmd := flag.NewFlagSet("extend-locks", flag.ExitOnError)
-
-	wouldRetainCmd := flag.NewFlagSet("would-retain", flag.ExitOnError)
-
 	// Check if a command was provided
 	if len(os.Args) < 2 {
-		fmt.Println("Expected 'backup', 'extend-locks', or 'would-retain' command")
+		fmt.Println("Expected 'backup' command")
 		os.Exit(1)
 	}
 
 	// Parse the command
 	switch os.Args[1] {
 	case "backup":
-		backupCmd.Parse(os.Args[2:])
+		if err := backupCmd.Parse(os.Args[2:]); err != nil {
+			backupCmd.PrintDefaults()
+			os.Exit(1)
+		}
 		if *backupFile == "" {
 			fmt.Println("backup: -f flags are required")
 			backupCmd.PrintDefaults()
@@ -46,14 +45,9 @@ func main() {
 		}
 
 		return
-	case "extend-locks":
-		extendLocksCmd.Parse(os.Args[2:])
-		//extendLocks()
-	case "would-retain":
-		wouldRetainCmd.Parse(os.Args[2:])
 	default:
 		fmt.Printf("Unknown command: %s\n", os.Args[1])
-		fmt.Println("Expected 'backup', 'extend-locks', or 'would-retain' command")
+		fmt.Println("Expected 'backup' command")
 		os.Exit(1)
 	}
 }

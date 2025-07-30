@@ -22,7 +22,7 @@ type lockType int
 
 const (
 	lockTypeSimple  lockType = 0
-	lockTypeRolling          = 1
+	lockTypeRolling lockType = 1
 )
 
 type lockSchedule struct {
