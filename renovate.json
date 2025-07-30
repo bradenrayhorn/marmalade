@@ -1,0 +1,31 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    ":separateMajorReleases",
+    ":ignoreModulesAndTests",
+    "group:monorepos",
+    "group:recommended",
+    "group:allNonMajor",
+    "workarounds:all",
+    "replacements:all",
+    "docker:pinDigests",
+    "helpers:pinGitHubActionDigests",
+    ":combinePatchMinorReleases",
+    ":disableRateLimiting",
+    ":pinDevDependencies",
+    ":semanticCommits"
+  ],
+  "schedule": ["before 4am on the first day of the month"],
+  "minimumReleaseAge": "28 days",
+  "internalChecksFilter": "strict",
+  "packageRules": [
+    {
+      "matchManagers": ["github-actions"],
+      "groupName": "github actions"
+    },
+    {
+      "matchDatasources": ["docker"],
+      "groupName": "docker base images"
+    }
+  ]
+}
