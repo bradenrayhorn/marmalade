@@ -26,6 +26,10 @@
     {
       "matchDatasources": ["docker"],
       "groupName": "docker base images"
+    },
+    {
+      "matchDatasources": ["golang-version"],
+      "rangeStrategy": "bump"
     }
   ]
 }
