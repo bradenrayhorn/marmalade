@@ -1,6 +1,6 @@
 module github.com/bradenrayhorn/marmalade
 
-go 1.24.1
+go 1.24.4
 
 require filippo.io/age v1.2.1
 
