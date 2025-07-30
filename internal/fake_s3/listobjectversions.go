@@ -59,7 +59,7 @@ func (s *FakeS3) handleListObjectVersions(w http.ResponseWriter, r *http.Request
 
 	maxKeys := 1000 // Default value
 	if maxKeysStr != "" {
-		fmt.Sscanf(maxKeysStr, "%d", &maxKeys)
+		_, _ = fmt.Sscanf(maxKeysStr, "%d", &maxKeys)
 	}
 
 	result := listObjectVersionsResponse{
