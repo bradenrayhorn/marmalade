@@ -29,7 +29,7 @@ func NewClient(config Config) *Client {
 		bucketName:   config.Bucket,
 		storageClass: config.StorageClass,
 		insecure:     config.Insecure,
-		httpClient:   &http.Client{Timeout: 60 * time.Second},
+		httpClient:   &http.Client{Timeout: 600 * time.Second},
 	}
 }
 
